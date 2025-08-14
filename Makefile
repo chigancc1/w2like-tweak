@@ -11,10 +11,9 @@ include $(THEOS)/makefiles/common.mk
 
 # ---- Tweak -----------------------------------------------------------------
 TWEAK_NAME = W2Like
-# main tweak file + any .m/.mm next to it
-W2Like_FILES = tweak.xm $(wildcard *.m) $(wildcard *.mm)
+# Make it robust to file name casing:
+W2Like_FILES = $(wildcard *.xm) $(wildcard *.m) $(wildcard *.mm)
 W2Like_CFLAGS += -fobjc-arc
-
 include $(THEOS_MAKE_PATH)/tweak.mk
 
 # ---- Preferences bundle (optional) -----------------------------------------
