@@ -2,7 +2,15 @@
 ARCHS := arm64 arm64e
 # Broad min version; the workflow pins the SDK (14.x / 12.5.7) at build time.
 TARGET := iphone:clang:latest:12.0
+# Default build is rootless; override with THEOS_PACKAGE_SCHEME=rootful for iOS 12–13
 THEOS_PACKAGE_SCHEME ?= rootless
+
+# >>> IMPORTANT: Select the control file BEFORE including Theos <<<
+ifeq ($(THEOS_PACKAGE_SCHEME),rootless)
+  THEOS_CONTROL_PATH := $(CURDIR)/control.rootless
+else
+  THEOS_CONTROL_PATH := $(CURDIR)/control.rootful
+endif
 
 # Make sure nothing upstream slipped in extra libs (e.g. -lnotify)
 LIBRARIES :=
@@ -38,7 +46,7 @@ W2LikePrefs_CFLAGS += -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/bundle.mk
 
-# ---- PreferenceLoader entry plist (if you keep Entry.plist in repo root) ----
+# ---- PreferenceLoader entry plist (optional) --------------------------------
 # Copies Entry.plist -> /Library/PreferenceLoader/Preferences/W2LikePrefs.plist
 after-stage::
 	@set -e; \
@@ -46,25 +54,3 @@ after-stage::
 	  mkdir -p "$(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences"; \
 	  cp -a Entry.plist "$(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences/W2LikePrefs.plist"; \
 	fi
-
-# ---- Pick the right control file automatically ------------------------------
-# Keep two files at repo root:
-#   control.rootless (iOS 14+)
-#   control.rootful  (iOS 12.5.7)
-# This copies the chosen one to "control" before packaging, then cleans up.
-
-before-package::
-	@set -e; \
-	rm -f control; \
-	SCHEME="$(THEOS_PACKAGE_SCHEME)"; \
-	if [ -z "$$SCHEME" ]; then SCHEME=rootless; fi; \
-	if [ -f "control.$$SCHEME" ]; then \
-	  cp "control.$$SCHEME" control; \
-	  echo "Using control.$$SCHEME"; \
-	else \
-	  echo "ERROR: control.$$SCHEME not found. Add control.rootless and control.rootful to repo root."; \
-	  exit 1; \
-	fi
-
-after-package::
-	@rm -f control || true
