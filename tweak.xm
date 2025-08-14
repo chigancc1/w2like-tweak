@@ -21,11 +21,7 @@ static W2AssetReader *W2SharedReader(void) {
 }
 
 #define W2Log(...) NSLog(@"[W2Like] " __VA_ARGS__)
-
-// Associated key for proxies (objc/runtime)
-static const void *kW2ProxyKey = &kW2ProxyKey;
-
-// Darwin notification name (prefs changed)
+static const void *kW2ProxyKey = &kW2ProxyKey;   // associated key
 #define W2PrefsChangedCF CFSTR("com.w2like.prefschanged")
 
 // ---------------------------------------------------------
@@ -36,6 +32,8 @@ static const void *kW2ProxyKey = &kW2ProxyKey;
 @property(nonatomic, strong) W2AssetReader *reader;
 @property(nonatomic, assign) BOOL enabled;
 @property(nonatomic, assign) BOOL overlayOnly;
+// *** declare so the C callback can call it without compile error
+- (void)_prefsChanged;
 @end
 
 static void W2DarwinPrefsChangedCallback(CFNotificationCenterRef center,
@@ -57,7 +55,6 @@ static void W2DarwinPrefsChangedCallback(CFNotificationCenterRef center,
         _overlayOnly = [W2PrefsManager shared].overlayOnly;
         _reader      = W2SharedReader();
 
-        // Observe prefs via Darwin notify (matches notify_post)
         CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
                                         (__bridge const void *)self,
                                         W2DarwinPrefsChangedCallback,
@@ -102,7 +99,6 @@ static void W2DarwinPrefsChangedCallback(CFNotificationCenterRef center,
         return;
     }
 
-    // Fallback to real if reader not ready
     if ([_real respondsToSelector:_cmd]) {
         [_real captureOutput:output didOutputSampleBuffer:sampleBuffer fromConnection:connection];
     }
@@ -114,7 +110,6 @@ static void W2DarwinPrefsChangedCallback(CFNotificationCenterRef center,
 - (void)setSampleBufferDelegate:(id)sampleBufferDelegate queue:(dispatch_queue_t)sampleBufferCallbackQueue {
     if (!sampleBufferDelegate) { %orig; return; }
 
-    // Per-app allow list
     NSString *proc = [[NSProcessInfo processInfo] processName];
     if (![[W2PrefsManager shared] isAllowedForProcess:proc]) {
         %orig;
@@ -138,7 +133,7 @@ static void W2DarwinPrefsChangedCallback(CFNotificationCenterRef center,
 // ---------------------------------------------------------
 @interface W2OverlayWindow : UIWindow @end
 @implementation W2OverlayWindow
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event { return NO; } // pass touches through
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event { return NO; }
 @end
 
 static W2OverlayWindow *gOverlay;
@@ -177,7 +172,7 @@ static void W2_showOverlayIfNeeded(void) {
 }
 
 %hook UIApplication
-- (void)didFinishLaunching { // lightweight trigger for overlay
+- (void)didFinishLaunching {
     %orig;
     W2_showOverlayIfNeeded();
 }
@@ -190,6 +185,8 @@ static void W2_showOverlayIfNeeded(void) {
 @property(nonatomic, weak)   id real;
 @property(nonatomic, strong) W2AssetReader *reader;
 @property(nonatomic, assign) BOOL enabled;
+// *** declare so the C callback can call it without compile error
+- (void)_prefsChanged;
 @end
 
 static void W2DarwinPrefsChangedCallbackAudio(CFNotificationCenterRef center,
@@ -244,7 +241,6 @@ static void W2DarwinPrefsChangedCallbackAudio(CFNotificationCenterRef center,
         return;
     }
 
-    // In a full impl, feed audio from the video’s audio track.
     CMSampleBufferRef fakeAudio = [self.reader nextAudioSampleLike:sampleBuffer];
     if (fakeAudio) {
         if ([_real respondsToSelector:_cmd]) {
@@ -285,7 +281,7 @@ static void W2ToggleEnabled(void) {
                              enabled ? kCFBooleanFalse : kCFBooleanTrue,
                              CFSTR("com.w2like.prefs"));
     CFPreferencesAppSynchronize(CFSTR("com.w2like.prefs"));
-    notify_post("com.w2like.prefschanged"); // broadcast to all processes
+    notify_post("com.w2like.prefschanged");
     NSLog(@"[W2Like] Toggled Enabled => %d", !enabled);
 }
 
