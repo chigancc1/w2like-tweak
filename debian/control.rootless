@@ -2,7 +2,7 @@ Package: com.chiganc1.w2like.rootless
 Name: W2Like (Virtual Camera) [rootless]
 Version: 0.1.0
 Architecture: iphoneos-arm64
-Depends: firmware (>= 15.0), mobilesubstrate, preferenceloader
+Depends: firmware (>= 14.0), mobilesubstrate, preferenceloader
 Section: Tweaks
 Priority: optional
 Maintainer: chiganc1
