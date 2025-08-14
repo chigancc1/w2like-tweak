@@ -84,19 +84,29 @@ jobs:
           git lfs pull
           ls -lah
 
-      # ---- Pin an iOS 14.x SDK to avoid 16.x header issues ----
-      - name: Select iOS 14.x SDK
-        run: |
-          set -eux
-          for ver in 14.5 14.4 14.2 14.0 13.7 13.0; do
-            SDK="$THEOS/sdks/iPhoneOS${ver}.sdk"
-            if [ -d "$SDK" ]; then
-              echo "Using SDK: $SDK"
-              echo "THEOS_PLATFORM_SDK_ROOT=$SDK" >> $GITHUB_ENV
-              exit 0
-            fi
-          done
-          echo "No 14.x/13.x SDK found. Available SDKs:"; ls -la "$THEOS/sdks"; exit 1
+    # ---- Pin iOS 14.x SDK (force; avoid 15+/16+/17+ header issues) ----
+- name: Pin iOS 14.x SDK
+  run: |
+    set -eux
+    # Remove newer SDKs so clang can't accidentally use them
+    rm -rf "$THEOS/sdks/iPhoneOS16"*.sdk "$THEOS/sdks/iPhoneOS17"*.sdk "$THEOS/sdks/iPhoneOS15"*.sdk || true
+
+    # Pick the best available 14.x (fallback to 13.x if needed)
+    for ver in 14.5 14.4 14.2 14.0 13.7 13.0 12.5 12.0; do
+      SDK="$THEOS/sdks/iPhoneOS${ver}.sdk"
+      if [ -d "$SDK" ]; then
+        echo "Using SDK: $SDK"
+        {
+          echo "THEOS_PLATFORM_SDK_ROOT=$SDK"
+          echo "SDKROOT=$SDK"
+          echo "SYSROOT=$SDK"
+        } >> $GITHUB_ENV
+        exit 0
+      fi
+    done
+
+    echo "No 14.x/13.x/12.x SDK found. Available:"; ls -la "$THEOS/sdks"
+    exit 1
 
       # ---- Find your tweak folder (first dir containing a Makefile) ----
       - name: Detect tweak directory
