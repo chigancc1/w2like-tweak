@@ -2,7 +2,8 @@
 ARCHS := arm64 arm64e
 # Broad min version; the workflow pins the SDK (14.x / 12.5.7) at build time.
 TARGET := iphone:clang:latest:12.0
-THEOS_PACKAGE_SCHEME ?= rootless
+# Default to rootful so you can ship iOS 12.5.7+ easily; override to rootless in CI when needed.
+THEOS_PACKAGE_SCHEME ?= rootful
 
 # Make sure nothing upstream slipped in extra libs (e.g. -lnotify)
 LIBRARIES :=
