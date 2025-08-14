@@ -1,8 +1,14 @@
 # ---- Theos build config (Linux/GitHub Actions) ------------------------------
-ARCHS := arm64 arm64e
-# Broad min version; the workflow pins the SDK (14.x / 12.5.7) at build time.
+# Rootful iOS 12.x (A7–A11) devices → build only arm64 (no arm64e)
+ARCHS := arm64
+
+# Broad min version; your workflow will pin the SDK it finds (12.x/14.x).
 TARGET := iphone:clang:latest:12.0
-THEOS_PACKAGE_SCHEME ?= rootless
+
+# Force rootful package scheme
+THEOS_PACKAGE_SCHEME := rootful
+# If you keep multiple control files, uncomment this to point to the rootful one:
+# THEOS_CONTROL_PATH := $(PWD)/debian/control.rootful
 
 # Make sure nothing upstream slipped in extra libs (e.g. -lnotify)
 LIBRARIES :=
