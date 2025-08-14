@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>items</key>
+    <array>
+        <dict>
+            <key>cell</key><string>PSGroupCell</string>
+            <key>label</key><string>W2Like Virtual Camera</string>
+            <key>footerText</key><string>For testing and demo only. Respect app policies and local laws.</string>
+        </dict>
+
+        <dict>
+            <key>cell</key><string>PSSwitchCell</string>
+            <key>default</key><false/>
+            <key>defaults</key><string>com.w2like.prefs</string>
+            <key>key</key><string>Enabled</string>
+            <key>label</key><string>Enable</string>
+            <key>PostNotification</key><string>com.w2like.prefschanged</string>
+        </dict>
+
+        <dict>
+            <key>cell</key><string>PSSwitchCell</string>
+            <key>default</key><false/>
+            <key>defaults</key><string>com.w2like.prefs</string>
+            <key>key</key><string>OverlayOnly</string>
+            <key>label</key><string>Camera overlay mode (stock Camera)</string>
+            <key>PostNotification</key><string>com.w2like.prefschanged</string>
+        </dict>
+
+        <dict>
+            <key>cell</key><string>PSEditTextCell</string>
+            <key>defaults</key><string>com.w2like.prefs</string>
+            <key>key</key><string>VideoPath</string>
+            <key>label</key><string>Video path</string>
+            <key>default</key><string>/var/mobile/Media/W2Like/clip.mp4</string>
+            <key>PostNotification</key><string>com.w2like.prefschanged</string>
+        </dict>
+
+        <dict>
+            <key>cell</key><string>PSTitleValueCell</string>
+            <key>label</key><string>Open video folder</string>
+            <key>action</key><string>openPickHelp</string>
+        </dict>
+
+        <dict>
+            <key>cell</key><string>PSMultiValueSpecifier</string>
+            <key>defaults</key><string>com.w2like.prefs</string>
+            <key>key</key><string>Allowed</string>
+            <key>title</key><string>Target apps (process names)</string>
+            <key>values</key>
+            <array>
+                <string>Instagram</string>
+                <string>TikTok</string>
+                <string>Facebook</string>
+                <string>Camera</string>
+            </array>
+            <key>titles</key>
+            <array>
+                <string>Instagram</string>
+                <string>TikTok</string>
+                <string>Facebook</string>
+                <string>Camera</string>
+            </array>
+            <key>multipleSelection</key><true/>
+            <key>PostNotification</key><string>com.w2like.prefschanged</string>
+        </dict>
+
+        <dict>
+            <key>cell</key><string>PSGroupCell</string>
+            <key>label</key><string>Utilities</string>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSTitleValueCell</string>
+            <key>label</key><string>Respring</string>
+            <key>action</key><string>respring</string>
+        </dict>
+    </array>
+    <key>title</key><string>W2Like</string>
+</dict>
+</plist>
