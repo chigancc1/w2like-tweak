@@ -1,23 +1,15 @@
-ARCHS = arm64 arm64e
-TARGET = iphone:clang:latest:14.0
-
-THEOS_DEVICE_IP = 127.0.0.1
-
 include $(THEOS)/makefiles/common.mk
 
-TWEAK_NAME = W2Like
+BUNDLE_NAME = W2LikePrefs
+W2LikePrefs_FILES = W2LRootListController.m
+W2LikePrefs_INSTALL_PATH = /Library/PreferenceBundles
+W2LikePrefs_FRAMEWORKS = UIKit
+W2LikePrefs_PRIVATE_FRAMEWORKS = Preferences
+W2LikePrefs_CFLAGS = -fobjc-arc
+W2LikePrefs_RESOURCE_DIRS = Resources
 
-W2Like_FILES = Tweak.xm W2AssetReader.m W2PrefsManager.m
-W2Like_FRAMEWORKS = UIKit AVFoundation CoreMedia CoreVideo
-W2Like_PRIVATE_FRAMEWORKS = 
-W2Like_CFLAGS = -fobjc-arc
+include $(THEOS_MAKE_PATH)/bundle.mk
 
-# IMPORTANT: process names, not bundle IDs. Adjust to match your device if needed:
-# Common names: Instagram, TikTok (or Musically), Facebook, Camera
-INSTALL_TARGET_PROCESSES = Instagram TikTok Facebook Camera
-
-include $(THEOS_MAKE_PATH)/tweak.mk
-
-# Preferences bundle
-SUBPROJECTS += W2LikePrefs
-include $(THEOS_MAKE_PATH)/aggregate.mk
+internal-stage::
+	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences$(ECHO_END)
+	$(ECHO_NOTHING)cp Resources/Entry.plist $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences/W2LikePrefs.plist$(ECHO_END)
