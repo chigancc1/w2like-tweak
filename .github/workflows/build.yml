@@ -5,113 +5,103 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - '**.xm'
-      - '**.m'
-      - '**.mm'
-      - '**.h'
-      - 'tweak/**'
-      - 'prefs/**'
-      - 'debian/**'
+      - '**/*.xm'
+      - '**/*.mm'
+      - '**/*.m'
+      - '**/*.h'
       - 'Makefile'
       - '.github/workflows/build.yml'
 
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      THEOS: ${{ runner.temp }}/theos
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # ---- System deps (includes runtime libs the toolchain needs) ----
       - name: Install base deps
         run: |
-          set -eux
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential fakeroot rsync curl perl unzip git xz-utils zstd \
-            libplist-utils ca-certificates dpkg-dev git-lfs \
-            libtinfo5 libncurses5
+            build-essential fakeroot git perl curl ca-certificates zip unzip rsync libtinfo5
 
       - name: Install ldid (Procursus)
         run: |
           set -eux
-          sudo curl -L -o /usr/local/bin/ldid \
-            https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_linux_x86_64
-          sudo chmod +x /usr/local/bin/ldid
-          ldid -V || true
-
-      # ---- THEOS in a fresh temp dir every run ----
-      - name: Prepare THEOS dir (temp)
-        run: |
-          set -eux
-          echo "THEOS=$RUNNER_TEMP/theos" >> $GITHUB_ENV
-          rm -rf "$RUNNER_TEMP/theos"
-          mkdir -p "$RUNNER_TEMP/theos"
+          curl -L -o ldid https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_linux_x86_64
+          sudo install -m755 ldid /usr/local/bin/ldid
 
       - name: Fetch Theos
         run: |
           set -eux
-          git clone --recursive --depth=1 https://github.com/theos/theos "$THEOS"
+          git clone --recursive https://github.com/theos/theos.git "$THEOS"
 
-      # ---- iOS cross-toolchain (linux → iphoneos) ----
-      - name: Fetch toolchain
+      - name: Fetch toolchain (Linux → iPhoneOS)
         run: |
           set -eux
-          mkdir -p "$THEOS/toolchain/linux/iphone"
-          WORK="$RUNNER_TEMP/toolchain"
-          rm -rf "$WORK" && mkdir -p "$WORK"
-          curl -L -o "$WORK/toolchain.tar.lzma" \
-            https://github.com/sbingner/llvm-project/releases/latest/download/linux-ios-arm64e-clang-toolchain.tar.lzma
-          # Some runners don't support 'tar --lzma'; convert first
-          xz --format=lzma -d "$WORK/toolchain.tar.lzma"
-          tar -xf "$WORK/toolchain.tar" -C "$WORK"
-          SRC_DIR="$(find "$WORK" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-          if [ -z "$SRC_DIR" ]; then echo "Toolchain folder not found"; exit 1; fi
-          rm -rf "$THEOS/toolchain/linux/iphone"/*
-          cp -a "$SRC_DIR/"* "$THEOS/toolchain/linux/iphone/"
+          mkdir -p "$THEOS/toolchain"
+          urls=(
+            https://github.com/theos/toolchain-linux/releases/latest/download/iphoneos-linux-toolchain.tar.xz
+            https://github.com/theos/toolchain-linux/releases/latest/download/iphoneos-clang-toolchain.tar.xz
+            https://github.com/theos/toolchain-linux/releases/latest/download/linux-ios-toolchain.tar.xz
+          )
+          got=""
+          for u in "${urls[@]}"; do
+            echo "Attempting: $u"
+            curl -fL "$u" -o /tmp/ios-toolchain.tar.xz && got="yes" && break || true
+          done
+          if [ -z "$got" ]; then
+            echo "Could not download toolchain from known URLs"; exit 1
+          fi
+          tar -xJf /tmp/ios-toolchain.tar.xz -C "$THEOS/toolchain"
 
-      # ---- iOS SDKs (via Git LFS) ----
       - name: Fetch iOS SDKs
         run: |
           set -eux
-          git lfs install
-          rm -rf "$THEOS/sdks"
           git clone --depth=1 https://github.com/theos/sdks.git "$THEOS/sdks"
-          cd "$THEOS/sdks"
-          git lfs pull
-          ls -lah
 
-      # ---- Find your tweak folder (first dir containing a Makefile) ----
-      - name: Detect tweak directory
-        id: detect
+      - name: Pick older iOS SDK for Linux Clang
         run: |
           set -eux
-          candidates=("tweak/W2Like" "tweak" "." "W2Like" "src" "package")
-          for d in "${candidates[@]}"; do
-            if [ -f "$d/Makefile" ]; then
-              echo "TWEAK_DIR=$d" >> $GITHUB_ENV
-              echo "Found Makefile in: $d"
+          for ver in 14.5 14.4 14.2 13.7 13.0; do
+            C="$THEOS/sdks/iPhoneOS${ver}.sdk"
+            if [ -d "$C" ]; then
+              echo "Using SDK: $C"
+              echo "THEOS_PLATFORM_SDK_ROOT=$C" >> $GITHUB_ENV
               exit 0
             fi
           done
-          echo "Could not find a Makefile. Repo contents:"
-          find . -maxdepth 3 -type f -name Makefile -print || true
-          ls -la
-          exit 1
+          echo "No 14.x/13.x SDK found. Available SDKs:"; ls -la "$THEOS/sdks"; exit 1
 
-      # ---- Build (rootless) ----
+      - name: Detect tweak directory
+        id: finddir
+        run: |
+          set -eux
+          if [ -f Makefile ]; then
+            echo "dir=." >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          d=$(grep -RIl --include=Makefile -e '^TWEAK_NAME[[:space:]]*:=' -e '^BUNDLE_NAME[[:space:]]*:=' || true | head -n1)
+          if [ -n "$d" ]; then
+            echo "dir=$(dirname "$d")" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "No Makefile found"; exit 1
+
       - name: Build .deb (rootless)
-        working-directory: ${{ env.TWEAK_DIR }}
+        working-directory: ${{ steps.finddir.outputs.dir }}
         run: |
           set -eux
           make clean
           make package
-          ls -lah packages || true
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp -v packages/*.deb "$GITHUB_WORKSPACE/out/" || true
 
-      # ---- Upload artifact (.deb) ----
-      - name: Upload .deb artifact
+      - name: Upload .deb
         uses: actions/upload-artifact@v4
         with:
           name: w2like-deb
-          path: ${{ env.TWEAK_DIR }}/packages/*.deb
+          path: out/*.deb
