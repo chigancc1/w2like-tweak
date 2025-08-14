@@ -1,4 +1,4 @@
-# ---- Theos build config (Linux/GitHub Actions) ------------------------------
+now this was my makefile .. look at and merge your corrections with it so it does not bring any errors that would come up again " # ---- Theos build config (Linux/GitHub Actions) ------------------------------
 ARCHS := arm64 arm64e
 # Broad min version; the workflow pins the SDK (14.x / 12.5.7) at build time.
 TARGET := iphone:clang:latest:12.0
