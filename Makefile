@@ -1,13 +1,25 @@
 # ---- Theos build config (Linux) --------------------------------------------
-ARCHS = arm64 arm64e
-# Force 14.5 SDK to avoid iOS 16 header/attribute issues on Linux clang
-TARGET := iphone:clang:latest:14.5
-THEOS_PACKAGE_SCHEME = rootless
-
-# Nice version string if repo is a git repo (optional)
-PACKAGE_VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.1)
+ARCHS := arm64 arm64e
+# Use “latest” toolchain but a broad min version (the workflow pins the SDK itself)
+TARGET := iphone:clang:latest:12.0
+THEOS_PACKAGE_SCHEME ?= rootless
 
 include $(THEOS)/makefiles/common.mk
+
+# --- tweak ---
+TWEAK_NAME := W2Like
+W2Like_FILES := tweak.xm $(wildcard *.m) $(wildcard *.mm)
+W2Like_CFLAGS += -fobjc-arc
+include $(THEOS_MAKE_PATH)/tweak.mk
+
+# --- prefs bundle (optional) ---
+BUNDLE_NAME := W2LikePrefs
+W2LikePrefs_FILES := W2LRootListController.m
+W2LikePrefs_INSTALL_PATH := /Library/PreferenceBundles
+W2LikePrefs_FRAMEWORKS := UIKit
+W2LikePrefs_PRIVATE_FRAMEWORKS := Preferences
+W2LikePrefs_CFLAGS += -fobjc-arc
+include $(THEOS_MAKE_PATH)/bundle.mk
 
 # ---- Tweak -----------------------------------------------------------------
 TWEAK_NAME = W2Like
