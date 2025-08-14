@@ -17,9 +17,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    env:
-      # Install Theos into a fresh temp dir every run → no “already exists” errors
-      THEOS: ${{ runner.temp }}/theos
 
     steps:
       - name: Checkout source
@@ -39,18 +36,17 @@ jobs:
           sudo chmod +x /usr/local/bin/ldid
           ldid -V || true
 
-      # --- THEOS baseline (clean each run) ---
-      - name: Prepare THEOS dir
+      # ❗ Set THEOS using RUNNER_TEMP and export via GITHUB_ENV
+      - name: Prepare THEOS dir (temp)
         run: |
-          rm -rf "$THEOS"
-          mkdir -p "$THEOS"
-          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          echo "THEOS=$RUNNER_TEMP/theos" >> $GITHUB_ENV
+          rm -rf "$RUNNER_TEMP/theos"
+          mkdir -p "$RUNNER_TEMP/theos"
 
       - name: Fetch Theos
         run: |
           git clone --recursive --depth=1 https://github.com/theos/theos "$THEOS"
 
-      # --- Toolchain (Linux → iPhoneOS) ---
       - name: Fetch toolchain
         run: |
           set -eux
@@ -59,7 +55,6 @@ jobs:
           rm -rf "$WORK" && mkdir -p "$WORK"
           curl -L -o "$WORK/toolchain.tar.lzma" \
             https://github.com/sbingner/llvm-project/releases/latest/download/linux-ios-arm64e-clang-toolchain.tar.lzma
-          # Some images lack `tar --lzma`; convert with xz then extract
           xz --format=lzma -d "$WORK/toolchain.tar.lzma"
           tar -xf "$WORK/toolchain.tar" -C "$WORK"
           SRC_DIR="$(find "$WORK" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
@@ -67,23 +62,19 @@ jobs:
           rm -rf "$THEOS/toolchain/linux/iphone/*" || true
           cp -a "$SRC_DIR/"* "$THEOS/toolchain/linux/iphone/"
 
-      # --- SDKs via Git LFS (reliable & idempotent) ---
       - name: Fetch iOS SDKs
         run: |
           set -eux
           git lfs install
-          rm -rf "$THEOS/sdks"         # always start clean
+          rm -rf "$THEOS/sdks"
           git clone --depth=1 https://github.com/theos/sdks.git "$THEOS/sdks"
           cd "$THEOS/sdks"
           git lfs pull
           ls -lah
 
-      # --- Build ---
       - name: Build .deb (rootless)
-        # ⬇️ CHANGE THIS PATH if your tweak folder is different
+        # 🔁 Change this path if your tweak folder isn’t tweak/W2Like
         working-directory: tweak/W2Like
-        env:
-          THEOS: ${{ env.THEOS }}
         run: |
           make clean
           make package
