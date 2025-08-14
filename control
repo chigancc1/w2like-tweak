@@ -1,0 +1,11 @@
+Package: com.yourname.w2like
+Name: W2Like (Virtual Camera)
+Version: 0.1.0
+Architecture: iphoneos-arm64
+Description: Replace camera feed with a chosen video; per-app toggles for Instagram, TikTok, Facebook, and Camera. Includes overlay mode for stock Camera preview.
+Maintainer: You
+Depends: firmware (>= 14.0), mobilesubstrate, preferenceloader
+Section: Tweaks
+Priority: optional
+Depiction: https://chigancc1.github.io/w2like-repo/depictions/w2like.html
+SileoDepiction: https://chigancc1.github.io/w2like-repo/depictions/w2like.json
