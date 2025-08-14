@@ -2,15 +2,7 @@
 ARCHS := arm64 arm64e
 # Broad min version; the workflow pins the SDK (14.x / 12.5.7) at build time.
 TARGET := iphone:clang:latest:12.0
-# Default build is rootless; override with THEOS_PACKAGE_SCHEME=rootful for iOS 12–13
 THEOS_PACKAGE_SCHEME ?= rootless
-
-# >>> IMPORTANT: Select the control file BEFORE including Theos <<<
-ifeq ($(THEOS_PACKAGE_SCHEME),rootless)
-  THEOS_CONTROL_PATH := $(CURDIR)/control.rootless
-else
-  THEOS_CONTROL_PATH := $(CURDIR)/control.rootful
-endif
 
 # Make sure nothing upstream slipped in extra libs (e.g. -lnotify)
 LIBRARIES :=
@@ -46,7 +38,7 @@ W2LikePrefs_CFLAGS += -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/bundle.mk
 
-# ---- PreferenceLoader entry plist (optional) --------------------------------
+# ---- PreferenceLoader entry plist (if you keep Entry.plist in repo root) ----
 # Copies Entry.plist -> /Library/PreferenceLoader/Preferences/W2LikePrefs.plist
 after-stage::
 	@set -e; \
