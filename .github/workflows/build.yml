@@ -36,7 +36,7 @@ jobs:
           sudo chmod +x /usr/local/bin/ldid
           ldid -V || true
 
-      # ❗ Set THEOS using RUNNER_TEMP and export via GITHUB_ENV
+      # Set THEOS in the runner's temp dir to avoid collisions
       - name: Prepare THEOS dir (temp)
         run: |
           echo "THEOS=$RUNNER_TEMP/theos" >> $GITHUB_ENV
@@ -72,16 +72,33 @@ jobs:
           git lfs pull
           ls -lah
 
+      # 🔎 Auto-detect the tweak directory (first folder that has a Makefile)
+      - name: Detect tweak directory
+        id: detect
+        run: |
+          set -eux
+          candidates=("tweak/W2Like" "tweak" "." "W2Like" "src" "package" )
+          for d in "${candidates[@]}"; do
+            if [ -f "$d/Makefile" ]; then
+              echo "TWEAK_DIR=$d" >> $GITHUB_ENV
+              echo "Found Makefile in: $d"
+              exit 0
+            fi
+          done
+          echo "Could not find a Makefile. Repo contents:"
+          find . -maxdepth 3 -type f -name Makefile -print || true
+          ls -la
+          exit 1
+
       - name: Build .deb (rootless)
-        # 🔁 Change this path if your tweak folder isn’t tweak/W2Like
-        working-directory: tweak/W2Like
+        working-directory: ${{ env.TWEAK_DIR }}
         run: |
           make clean
           make package
-          ls -lah packages
+          ls -lah packages || true
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: w2like-deb
-          path: tweak/W2Like/packages/*.deb
+          path: ${{ env.TWEAK_DIR }}/packages/*.deb
