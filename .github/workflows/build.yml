@@ -1,0 +1,90 @@
+name: Build .deb (Theos)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - '**.xm'
+      - '**.m'
+      - '**.mm'
+      - '**.h'
+      - 'tweak/**'
+      - 'prefs/**'
+      - 'debian/**'
+      - '.github/workflows/build.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    env:
+      THEOS: ${{ runner.temp }}/theos
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install base deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential fakeroot rsync curl perl unzip git xz-utils \
+            libplist-utils ca-certificates dpkg-dev git-lfs
+
+      - name: Install ldid (Procursus)
+        run: |
+          sudo curl -L -o /usr/local/bin/ldid \
+            https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_linux_x86_64
+          sudo chmod +x /usr/local/bin/ldid
+          ldid -V || true
+
+      - name: Prepare THEOS dir
+        run: |
+          rm -rf "$THEOS"
+          mkdir -p "$THEOS"
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+
+      - name: Fetch Theos
+        run: |
+          git clone --recursive --depth=1 https://github.com/theos/theos "$THEOS"
+
+      - name: Fetch toolchain
+        run: |
+          set -eux
+          mkdir -p "$THEOS/toolchain/linux/iphone"
+          WORK="$RUNNER_TEMP/toolchain"
+          rm -rf "$WORK" && mkdir -p "$WORK"
+          curl -L -o "$WORK/toolchain.tar.lzma" \
+            https://github.com/sbingner/llvm-project/releases/latest/download/linux-ios-arm64e-clang-toolchain.tar.lzma
+          xz --format=lzma -d "$WORK/toolchain.tar.lzma"
+          tar -xf "$WORK/toolchain.tar" -C "$WORK"
+          SRC_DIR="$(find "$WORK" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          if [ -z "$SRC_DIR" ]; then echo "Toolchain folder not found"; exit 1; fi
+          rm -rf "$THEOS/toolchain/linux/iphone/*" || true
+          cp -a "$SRC_DIR/"* "$THEOS/toolchain/linux/iphone/"
+
+      - name: Fetch iOS SDKs
+        run: |
+          set -eux
+          git lfs install
+          rm -rf "$THEOS/sdks"
+          git clone --depth=1 https://github.com/theos/sdks.git "$THEOS/sdks"
+          cd "$THEOS/sdks"
+          git lfs pull
+          ls -lah
+
+      - name: Build .deb (rootless)
+        # CHANGE this path if your tweak folder isn’t tweak/W2Like
+        working-directory: tweak/W2Like
+        env:
+          THEOS: ${{ env.THEOS }}
+        run: |
+          make clean
+          make package
+          ls -lah packages
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: w2like-deb
+          path: tweak/W2Like/packages/*.deb
