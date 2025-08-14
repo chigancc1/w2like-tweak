@@ -12,6 +12,7 @@ on:
       - 'tweak/**'
       - 'prefs/**'
       - 'debian/**'
+      - 'Makefile'
       - '.github/workflows/build.yml'
 
 jobs:
@@ -22,31 +23,38 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      # ---- System deps (includes runtime libs the toolchain needs) ----
       - name: Install base deps
         run: |
+          set -eux
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential fakeroot rsync curl perl unzip git xz-utils \
-            libplist-utils ca-certificates dpkg-dev git-lfs
+            build-essential fakeroot rsync curl perl unzip git xz-utils zstd \
+            libplist-utils ca-certificates dpkg-dev git-lfs \
+            libtinfo5 libncurses5
 
       - name: Install ldid (Procursus)
         run: |
+          set -eux
           sudo curl -L -o /usr/local/bin/ldid \
             https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_linux_x86_64
           sudo chmod +x /usr/local/bin/ldid
           ldid -V || true
 
-      # Set THEOS in the runner's temp dir to avoid collisions
+      # ---- THEOS in a fresh temp dir every run ----
       - name: Prepare THEOS dir (temp)
         run: |
+          set -eux
           echo "THEOS=$RUNNER_TEMP/theos" >> $GITHUB_ENV
           rm -rf "$RUNNER_TEMP/theos"
           mkdir -p "$RUNNER_TEMP/theos"
 
       - name: Fetch Theos
         run: |
+          set -eux
           git clone --recursive --depth=1 https://github.com/theos/theos "$THEOS"
 
+      # ---- iOS cross-toolchain (linux → iphoneos) ----
       - name: Fetch toolchain
         run: |
           set -eux
@@ -55,13 +63,15 @@ jobs:
           rm -rf "$WORK" && mkdir -p "$WORK"
           curl -L -o "$WORK/toolchain.tar.lzma" \
             https://github.com/sbingner/llvm-project/releases/latest/download/linux-ios-arm64e-clang-toolchain.tar.lzma
+          # Some runners don't support 'tar --lzma'; convert first
           xz --format=lzma -d "$WORK/toolchain.tar.lzma"
           tar -xf "$WORK/toolchain.tar" -C "$WORK"
           SRC_DIR="$(find "$WORK" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
           if [ -z "$SRC_DIR" ]; then echo "Toolchain folder not found"; exit 1; fi
-          rm -rf "$THEOS/toolchain/linux/iphone/*" || true
+          rm -rf "$THEOS/toolchain/linux/iphone"/*
           cp -a "$SRC_DIR/"* "$THEOS/toolchain/linux/iphone/"
 
+      # ---- iOS SDKs (via Git LFS) ----
       - name: Fetch iOS SDKs
         run: |
           set -eux
@@ -72,12 +82,12 @@ jobs:
           git lfs pull
           ls -lah
 
-      # 🔎 Auto-detect the tweak directory (first folder that has a Makefile)
+      # ---- Find your tweak folder (first dir containing a Makefile) ----
       - name: Detect tweak directory
         id: detect
         run: |
           set -eux
-          candidates=("tweak/W2Like" "tweak" "." "W2Like" "src" "package" )
+          candidates=("tweak/W2Like" "tweak" "." "W2Like" "src" "package")
           for d in "${candidates[@]}"; do
             if [ -f "$d/Makefile" ]; then
               echo "TWEAK_DIR=$d" >> $GITHUB_ENV
@@ -90,13 +100,16 @@ jobs:
           ls -la
           exit 1
 
+      # ---- Build (rootless) ----
       - name: Build .deb (rootless)
         working-directory: ${{ env.TWEAK_DIR }}
         run: |
+          set -eux
           make clean
           make package
           ls -lah packages || true
 
+      # ---- Upload artifact (.deb) ----
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
