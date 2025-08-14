@@ -1,4 +1,4 @@
-name: Build .deb (Theos)
+name: Build .deb (Theos – rootful)
 
 on:
   workflow_dispatch:
@@ -46,7 +46,8 @@ jobs:
         run: |
           set -eux
           echo "THEOS=$RUNNER_TEMP/theos" >> $GITHUB_ENV
-          echo "THEOS_PACKAGE_SCHEME=rootless" >> $GITHUB_ENV
+          # Make sure we do NOT force rootless anywhere:
+          echo "THEOS_PACKAGE_SCHEME=" >> $GITHUB_ENV
           rm -rf "$RUNNER_TEMP/theos"
           mkdir -p "$RUNNER_TEMP/theos"
 
@@ -64,14 +65,12 @@ jobs:
           rm -rf "$WORK" && mkdir -p "$WORK"
           curl -L -o "$WORK/toolchain.tar.lzma" \
             https://github.com/sbingner/llvm-project/releases/latest/download/linux-ios-arm64e-clang-toolchain.tar.lzma
-          # Some runners don't support 'tar --lzma'; convert first
           xz --format=lzma -d "$WORK/toolchain.tar.lzma"
           tar -xf "$WORK/toolchain.tar" -C "$WORK"
           SRC_DIR="$(find "$WORK" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
           if [ -z "$SRC_DIR" ]; then echo "Toolchain folder not found"; exit 1; fi
           rm -rf "$THEOS/toolchain/linux/iphone"/*
           cp -a "$SRC_DIR/"* "$THEOS/toolchain/linux/iphone/"
-          # Make the toolchain compilers visible for make/theos
           echo "$THEOS/toolchain/linux/iphone/bin" >> $GITHUB_PATH
 
       # ---- iOS SDKs (via Git LFS) ----
@@ -85,15 +84,15 @@ jobs:
           git lfs pull
           ls -lah
 
-      # ---- Pin SDK: prefer 14.x, then 13.x, then 12.5.7 / 12.x ----
-      - name: Pin iOS SDK (14.x → 13.x → 12.5.7/12.x)
+      # ---- Pin SDK: prefer 12.5.7, then 14.x → 13.x → any 12.x fallback ----
+      - name: Pin iOS SDK (12.5.7 → 14.x → 13.x → 12.x)
         run: |
           set -eux
-          # Prevent accidental use of newer headers
+          # Avoid 15/16/17 headers to prevent modern-headers breakage
           rm -rf "$THEOS/sdks/iPhoneOS15"*.sdk "$THEOS/sdks/iPhoneOS16"*.sdk "$THEOS/sdks/iPhoneOS17"*.sdk || true
 
-          # Try explicit versions in order
-          for ver in 14.5 14.4 14.2 14.0 13.7 13.0 12.5.7 12.5 12.4 12.2; do
+          # Prefer 12.5.7 first for rootful build
+          for ver in 12.5.7 14.5 14.4 14.2 14.0 13.7 13.0 12.5 12.4 12.2; do
             SDK="$THEOS/sdks/iPhoneOS${ver}.sdk"
             if [ -d "$SDK" ]; then
               echo "Using SDK: $SDK"
@@ -106,7 +105,7 @@ jobs:
             fi
           done
 
-          # Last-ditch: any 12.x SDK if named slightly differently
+          # Last-ditch: any 12.x SDK
           any12="$(ls -d "$THEOS"/sdks/iPhoneOS12*.sdk 2>/dev/null | head -n 1 || true)"
           if [ -n "$any12" ]; then
             echo "Using fallback SDK: $any12"
@@ -118,7 +117,7 @@ jobs:
             exit 0
           fi
 
-          echo "No suitable 14.x/13.x/12.x SDK found. Available:"; ls -la "$THEOS/sdks"
+          echo "No suitable 12.x/14.x/13.x SDK found. Available:"; ls -la "$THEOS/sdks"
           exit 1
 
       # ---- Find your tweak folder (first dir containing a Makefile) ----
@@ -139,15 +138,16 @@ jobs:
           ls -la
           exit 1
 
-      # ---- Build (rootless) ----
-      - name: Build .deb (rootless)
+      # ---- Build (ROOTFUL) ----
+      - name: Build .deb (rootful)
         working-directory: ${{ env.TWEAK_DIR }}
         env:
-          # If your Makefile does not set a deployment target, this keeps it wide:
           TARGET: iphone:clang:latest:12.0
         run: |
           set -eux
-          echo "SDK in use: $THEOS_PLATFORM_SDK_ROOT"
+          # Make absolutely sure we are not on rootless:
+          unset THEOS_PACKAGE_SCHEME || true
+          echo "SDK in use: ${THEOS_PLATFORM_SDK_ROOT:-<default>}"
           make clean
           make package
           ls -lah packages || true
@@ -156,5 +156,5 @@ jobs:
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: w2like-deb
+          name: w2like-deb-rootful
           path: ${{ env.TWEAK_DIR }}/packages/*.deb
