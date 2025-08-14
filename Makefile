@@ -1,14 +1,8 @@
 # ---- Theos build config (Linux/GitHub Actions) ------------------------------
-# Rootful iOS 12.x (A7–A11) devices → build only arm64 (no arm64e)
+# Rootful / classic layout (no THEOS_PACKAGE_SCHEME set)
 ARCHS := arm64
-
-# Broad min version; your workflow will pin the SDK it finds (12.x/14.x).
+# Broad min version; the workflow will pin the SDK (prefers 12.5.7)
 TARGET := iphone:clang:latest:12.0
-
-# Force rootful package scheme
-THEOS_PACKAGE_SCHEME := rootful
-# If you keep multiple control files, uncomment this to point to the rootful one:
-# THEOS_CONTROL_PATH := $(PWD)/debian/control.rootful
 
 # Make sure nothing upstream slipped in extra libs (e.g. -lnotify)
 LIBRARIES :=
@@ -33,13 +27,13 @@ W2Like_CFLAGS += -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
-# ---- Preferences bundle (optional) ------------------------------------------
+# ---- Preferences bundle -----------------------------------------------------
 BUNDLE_NAME := W2LikePrefs
 W2LikePrefs_FILES := W2LRootListController.m
+# Rootful path (classic)
 W2LikePrefs_INSTALL_PATH := /Library/PreferenceBundles
 W2LikePrefs_FRAMEWORKS := UIKit
 W2LikePrefs_PRIVATE_FRAMEWORKS := Preferences
-# (No -lnotify here either)
 W2LikePrefs_CFLAGS += -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/bundle.mk
