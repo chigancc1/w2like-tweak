@@ -1,8 +1,11 @@
-now this was my makefile .. look at and merge your corrections with it so it does not bring any errors that would come up again " # ---- Theos build config (Linux/GitHub Actions) ------------------------------
+# ---- Theos build config (Linux/GitHub Actions) ------------------------------
 ARCHS := arm64 arm64e
 # Broad min version; the workflow pins the SDK (14.x / 12.5.7) at build time.
 TARGET := iphone:clang:latest:12.0
 THEOS_PACKAGE_SCHEME ?= rootless
+
+# Make sure nothing upstream slipped in extra libs (e.g. -lnotify)
+LIBRARIES :=
 
 include $(THEOS)/makefiles/common.mk
 
@@ -17,9 +20,7 @@ W2Like_FILES := tweak.xm $(wildcard *.m) $(wildcard *.mm)
 
 # Frameworks you actually use in the tweak
 W2Like_FRAMEWORKS := UIKit AVFoundation CoreFoundation
-
-# For notify_post()
-W2Like_LIBRARIES += notify
+# (Do NOT add -lnotify; notify_post resolves from libSystem on device)
 
 # ARC for Obj-C
 W2Like_CFLAGS += -fobjc-arc
@@ -32,7 +33,7 @@ W2LikePrefs_FILES := W2LRootListController.m
 W2LikePrefs_INSTALL_PATH := /Library/PreferenceBundles
 W2LikePrefs_FRAMEWORKS := UIKit
 W2LikePrefs_PRIVATE_FRAMEWORKS := Preferences
-W2LikePrefs_LIBRARIES += notify
+# (No -lnotify here either)
 W2LikePrefs_CFLAGS += -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/bundle.mk
