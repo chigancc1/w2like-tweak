@@ -2,15 +2,6 @@ name: Build .deb (Theos)
 
 on:
   workflow_dispatch:
-    inputs:
-      variant:
-        description: "Package scheme to build"
-        type: choice
-        required: true
-        default: rootless
-        options:
-          - rootless
-          - rootful
   push:
     branches: ["main"]
     paths:
@@ -55,10 +46,7 @@ jobs:
         run: |
           set -eux
           echo "THEOS=$RUNNER_TEMP/theos" >> $GITHUB_ENV
-          # Respect manual input when workflow_dispatch is used; default to rootless otherwise.
-          VARIANT="${{ github.event.inputs.variant }}"
-          if [ -z "$VARIANT" ]; then VARIANT="rootless"; fi
-          echo "THEOS_PACKAGE_SCHEME=$VARIANT" >> $GITHUB_ENV
+          echo "THEOS_PACKAGE_SCHEME=rootless" >> $GITHUB_ENV
           rm -rf "$RUNNER_TEMP/theos"
           mkdir -p "$RUNNER_TEMP/theos"
 
@@ -151,17 +139,16 @@ jobs:
           ls -la
           exit 1
 
-      # ---- Build (variant chosen above) ----
-      - name: Build .deb (${{ env.THEOS_PACKAGE_SCHEME }})
+      # ---- Build (rootless) ----
+      - name: Build .deb (rootless)
         working-directory: ${{ env.TWEAK_DIR }}
         env:
-          TARGET: iphone:clang:latest:12.0   # keep broad; Makefile pins control via THEOS_CONTROL_PATH
+          # If your Makefile does not set a deployment target, this keeps it wide:
+          TARGET: iphone:clang:latest:12.0
         run: |
           set -eux
-          echo "Scheme: $THEOS_PACKAGE_SCHEME"
-          echo "SDK in use: ${THEOS_PLATFORM_SDK_ROOT:-"(unset)"}"
+          echo "SDK in use: $THEOS_PLATFORM_SDK_ROOT"
           make clean
-          # THEOS_PACKAGE_SCHEME is already exported via GITHUB_ENV and used by your Makefile
           make package
           ls -lah packages || true
 
@@ -169,5 +156,5 @@ jobs:
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: w2like-deb-${{ env.THEOS_PACKAGE_SCHEME }}
+          name: w2like-deb
           path: ${{ env.TWEAK_DIR }}/packages/*.deb
