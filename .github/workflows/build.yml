@@ -3,17 +3,17 @@ name: Build .deb (Theos)
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
-      - '**/*.xm'
-      - '**/*.m'
-      - '**/*.mm'
-      - '**/*.h'
-      - 'tweak/**'
-      - 'prefs/**'
-      - 'debian/**'
-      - 'Makefile'
-      - '.github/workflows/build.yml'
+      - "**/*.xm"
+      - "**/*.m"
+      - "**/*.mm"
+      - "**/*.h"
+      - "tweak/**"
+      - "prefs/**"
+      - "debian/**"
+      - "Makefile"
+      - ".github/workflows/build.yml"
 
 jobs:
   build:
@@ -23,7 +23,7 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # ---- System deps (includes runtime libs the toolchain needs) ----
+      # ---- System deps (runtime libs the toolchain needs) ----
       - name: Install base deps
         run: |
           set -eux
@@ -46,6 +46,7 @@ jobs:
         run: |
           set -eux
           echo "THEOS=$RUNNER_TEMP/theos" >> $GITHUB_ENV
+          echo "THEOS_PACKAGE_SCHEME=rootless" >> $GITHUB_ENV
           rm -rf "$RUNNER_TEMP/theos"
           mkdir -p "$RUNNER_TEMP/theos"
 
@@ -70,7 +71,7 @@ jobs:
           if [ -z "$SRC_DIR" ]; then echo "Toolchain folder not found"; exit 1; fi
           rm -rf "$THEOS/toolchain/linux/iphone"/*
           cp -a "$SRC_DIR/"* "$THEOS/toolchain/linux/iphone/"
-          # Make toolchain compilers available on PATH for make/theos
+          # Make the toolchain compilers visible for make/theos
           echo "$THEOS/toolchain/linux/iphone/bin" >> $GITHUB_PATH
 
       # ---- iOS SDKs (via Git LFS) ----
@@ -84,29 +85,41 @@ jobs:
           git lfs pull
           ls -lah
 
-    # ---- Pin iOS 14.x SDK (force; avoid 15+/16+/17+ header issues) ----
-- name: Pin iOS 14.x SDK
-  run: |
-    set -eux
-    # Remove newer SDKs so clang can't accidentally use them
-    rm -rf "$THEOS/sdks/iPhoneOS16"*.sdk "$THEOS/sdks/iPhoneOS17"*.sdk "$THEOS/sdks/iPhoneOS15"*.sdk || true
+      # ---- Pin SDK: prefer 14.x, then 13.x, then 12.5.7 / 12.x ----
+      - name: Pin iOS SDK (14.x → 13.x → 12.5.7/12.x)
+        run: |
+          set -eux
+          # Prevent accidental use of newer headers
+          rm -rf "$THEOS/sdks/iPhoneOS15"*.sdk "$THEOS/sdks/iPhoneOS16"*.sdk "$THEOS/sdks/iPhoneOS17"*.sdk || true
 
-    # Pick the best available 14.x (fallback to 13.x if needed)
-    for ver in 14.5 14.4 14.2 14.0 13.7 13.0 12.5 12.0; do
-      SDK="$THEOS/sdks/iPhoneOS${ver}.sdk"
-      if [ -d "$SDK" ]; then
-        echo "Using SDK: $SDK"
-        {
-          echo "THEOS_PLATFORM_SDK_ROOT=$SDK"
-          echo "SDKROOT=$SDK"
-          echo "SYSROOT=$SDK"
-        } >> $GITHUB_ENV
-        exit 0
-      fi
-    done
+          # Try explicit versions in order
+          for ver in 14.5 14.4 14.2 14.0 13.7 13.0 12.5.7 12.5 12.4 12.2; do
+            SDK="$THEOS/sdks/iPhoneOS${ver}.sdk"
+            if [ -d "$SDK" ]; then
+              echo "Using SDK: $SDK"
+              {
+                echo "THEOS_PLATFORM_SDK_ROOT=$SDK"
+                echo "SDKROOT=$SDK"
+                echo "SYSROOT=$SDK"
+              } >> $GITHUB_ENV
+              exit 0
+            fi
+          done
 
-    echo "No 14.x/13.x/12.x SDK found. Available:"; ls -la "$THEOS/sdks"
-    exit 1
+          # Last-ditch: any 12.x SDK if named slightly differently
+          any12="$(ls -d "$THEOS"/sdks/iPhoneOS12*.sdk 2>/dev/null | head -n 1 || true)"
+          if [ -n "$any12" ]; then
+            echo "Using fallback SDK: $any12"
+            {
+              echo "THEOS_PLATFORM_SDK_ROOT=$any12"
+              echo "SDKROOT=$any12"
+              echo "SYSROOT=$any12"
+            } >> $GITHUB_ENV
+            exit 0
+          fi
+
+          echo "No suitable 14.x/13.x/12.x SDK found. Available:"; ls -la "$THEOS/sdks"
+          exit 1
 
       # ---- Find your tweak folder (first dir containing a Makefile) ----
       - name: Detect tweak directory
@@ -129,8 +142,12 @@ jobs:
       # ---- Build (rootless) ----
       - name: Build .deb (rootless)
         working-directory: ${{ env.TWEAK_DIR }}
+        env:
+          # If your Makefile does not set a deployment target, this keeps it wide:
+          TARGET: iphone:clang:latest:12.0
         run: |
           set -eux
+          echo "SDK in use: $THEOS_PLATFORM_SDK_ROOT"
           make clean
           make package
           ls -lah packages || true
