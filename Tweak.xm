@@ -22,16 +22,16 @@ static W2AssetReader *W2SharedReader(void) {
 
 #define W2Log(...) NSLog(@"[W2Like] " __VA_ARGS__)
 
-// Associated key for proxies
+// Associated key for proxies (objc/runtime)
 static const void *kW2ProxyKey = &kW2ProxyKey;
 
-// Darwin notification name
+// Darwin notification name (prefs changed)
 #define W2PrefsChangedCF CFSTR("com.w2like.prefschanged")
 
 // ---------------------------------------------------------
 // Video proxy
 // ---------------------------------------------------------
-@interface W2Proxy : NSObject<AVCaptureVideoDataOutputSampleBufferDelegate>
+@interface W2Proxy : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 @property(nonatomic, weak)   id real;
 @property(nonatomic, strong) W2AssetReader *reader;
 @property(nonatomic, assign) BOOL enabled;
@@ -102,7 +102,7 @@ static void W2DarwinPrefsChangedCallback(CFNotificationCenterRef center,
         return;
     }
 
-    // fallback to real if reader not ready
+    // Fallback to real if reader not ready
     if ([_real respondsToSelector:_cmd]) {
         [_real captureOutput:output didOutputSampleBuffer:sampleBuffer fromConnection:connection];
     }
@@ -177,7 +177,7 @@ static void W2_showOverlayIfNeeded(void) {
 }
 
 %hook UIApplication
-- (void)didFinishLaunching {
+- (void)didFinishLaunching { // lightweight trigger for overlay
     %orig;
     W2_showOverlayIfNeeded();
 }
@@ -186,7 +186,7 @@ static void W2_showOverlayIfNeeded(void) {
 // ---------------------------------------------------------
 // AUDIO INJECTION
 // ---------------------------------------------------------
-@interface W2AudioProxy : NSObject<AVCaptureAudioDataOutputSampleBufferDelegate>
+@interface W2AudioProxy : NSObject <AVCaptureAudioDataOutputSampleBufferDelegate>
 @property(nonatomic, weak)   id real;
 @property(nonatomic, strong) W2AssetReader *reader;
 @property(nonatomic, assign) BOOL enabled;
@@ -245,7 +245,7 @@ static void W2DarwinPrefsChangedCallbackAudio(CFNotificationCenterRef center,
     }
 
     // In a full impl, feed audio from the video’s audio track.
-    CMSampleBufferRef fakeAudio = [self.reader nextAudioSampleLike:sampleBuffer]; // <-- fixed ;
+    CMSampleBufferRef fakeAudio = [self.reader nextAudioSampleLike:sampleBuffer];
     if (fakeAudio) {
         if ([_real respondsToSelector:_cmd]) {
             [_real captureOutput:output didOutputSampleBuffer:fakeAudio fromConnection:connection];
