@@ -138,6 +138,24 @@ jobs:
           ls -la
           exit 1
 
+      # ---- (NEW) Make maintainer scripts executable if present --------------
+      - name: Mark debian scripts executable (optional)
+        working-directory: ${{ env.TWEAK_DIR }}
+        run: |
+          set -eux
+          for f in debian/preinst debian/postinst debian/prerm debian/postrm; do
+            [ -f "$f" ] && chmod +x "$f" || true
+          done
+
+      # ---- (NEW) Log prefs resources so we know Root.plist is visible -------
+      - name: Show prefs resources (optional)
+        working-directory: ${{ env.TWEAK_DIR }}
+        run: |
+          set -eux
+          ls -lah prefs || true
+          ls -lah prefs/Resources || true
+          [ -f prefs/Resources/Root.plist ] && echo "Found prefs/Resources/Root.plist" || echo "Root.plist not found"
+
       # ---- Build (ROOTFUL) ----
       - name: Build .deb (rootful)
         working-directory: ${{ env.TWEAK_DIR }}
