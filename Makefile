@@ -36,6 +36,15 @@ W2LikePrefs_FRAMEWORKS := UIKit
 W2LikePrefs_PRIVATE_FRAMEWORKS := Preferences
 W2LikePrefs_CFLAGS += -fobjc-arc
 
+# --- NEW (safe) addition: include Root.plist in the bundle -------------------
+# We auto-detect Root.plist whether you keep it at project root or in Resources/
+# If it isn't present yet, this expands to empty and causes NO build error.
+ROOT_PLIST := $(firstword $(wildcard Resources/Root.plist Root.plist))
+ifneq ($(ROOT_PLIST),)
+W2LikePrefs_RESOURCES += $(ROOT_PLIST)
+endif
+# -----------------------------------------------------------------------------
+
 include $(THEOS_MAKE_PATH)/bundle.mk
 
 # ---- PreferenceLoader entry plist (if you keep Entry.plist in repo root) ----
