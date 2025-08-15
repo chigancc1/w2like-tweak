@@ -1,0 +1,24 @@
+#!/bin/sh
+set -e
+
+MEDIA_DIR="/var/mobile/Media/W2Like"
+
+# Ensure media directory exists (rootful paths)
+if [ ! -d "$MEDIA_DIR" ]; then
+  mkdir -p "$MEDIA_DIR"
+  chown -R mobile:mobile "$MEDIA_DIR" || true
+  chmod 755 "$MEDIA_DIR" || true
+fi
+
+# Refresh Settings pane/icon cache (non-fatal if tools missing)
+if command -v uicache >/dev/null 2>&1; then
+  uicache -p /Library/PreferenceBundles/W2LikePrefs.bundle 2>/dev/null || true
+fi
+killall -9 Preferences 2>/dev/null || true
+
+# Soft respring if available (optional)
+if command -v sbreload >/dev/null 2>&1; then
+  sbreload || true
+fi
+
+exit 0
