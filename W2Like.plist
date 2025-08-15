@@ -1,9 +1,12 @@
 {
   Filter = {
     Bundles = (
-      "com.apple.camera",
-      "com.apple.facetime",
-      "com.burbn.instagram"    /* Instagram */
+      "com.apple.camera",          /* Camera */
+      "com.apple.facetime",        /* FaceTime (optional) */
+      "com.burbn.instagram",       /* Instagram */
+      "com.toyopagroup.picaboo",   /* Snapchat */
+      "com.facebook.Facebook",     /* Facebook */
+      "com.zhiliaoapp.musically"   /* TikTok */
     );
   };
 }
