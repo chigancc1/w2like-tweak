@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleDevelopmentRegion</key><string>English</string>
-    <key>CFBundleExecutable</key><string>W2LikePrefs</string>
-    <key>CFBundleIdentifier</key><string>com.w2like.prefs</string>
-    <key>CFBundlePackageType</key><string>BNDL</string>
-    <key>CFBundleShortVersionString</key><string>0.1</string>
-    <key>CFBundleVersion</key><string>0.1</string>
-    <key>MinimumOSVersion</key><string>13.0</string>
-    <key>NSPrincipalClass</key><string>W2LRootListController</string>
+    <key>CFBundleDevelopmentRegion</key> <string>en</string>
+    <key>CFBundleExecutable</key>        <string>W2LikePrefs</string>
+    <key>CFBundleIdentifier</key>        <string>com.w2like.prefs</string>
+    <key>CFBundleName</key>              <string>W2LikePrefs</string>
+    <key>CFBundlePackageType</key>       <string>BNDL</string>
+    <key>CFBundleShortVersionString</key><string>0.1.0</string>
+    <key>CFBundleVersion</key>           <string>0.1.0</string>
+    <key>MinimumOSVersion</key>          <string>12.0</string>
+
+    <!-- Not required for PreferenceLoader. You can omit this.
+         If you keep it, ensure the class exists in the bundle. -->
+    <!-- <key>NSPrincipalClass</key> <string>W2LRootListController</string> -->
 </dict>
 </plist>
