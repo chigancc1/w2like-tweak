@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<array>
+
+  <!-- Title group -->
+  <dict>
+    <key>cell</key> <string>PSGroupCell</string>
+    <key>label</key> <string>W2Like</string>
+    <key>footerText</key>
+    <string>Replace camera feed with a chosen video. Put your file in /var/mobile/Media/W2Like/ and respring.</string>
+  </dict>
+
+  <!-- Enabled -->
+  <dict>
+    <key>cell</key>    <string>PSSwitchCell</string>
+    <key>label</key>   <string>Enabled</string>
+    <key>defaults</key> <string>com.w2like.prefs</string>
+    <key>key</key>     <string>Enabled</string>
+    <key>default</key> <true/>
+    <key>PostNotification</key> <string>com.w2like.prefschanged</string>
+  </dict>
+
+  <!-- Overlay-only -->
+  <dict>
+    <key>cell</key>    <string>PSSwitchCell</string>
+    <key>label</key>   <string>Overlay-only (Camera preview)</string>
+    <key>defaults</key> <string>com.w2like.prefs</string>
+    <key>key</key>     <string>OverlayOnly</string>
+    <key>default</key> <false/>
+    <key>PostNotification</key> <string>com.w2like.prefschanged</string>
+  </dict>
+
+  <!-- Video path (optional field you can edit) -->
+  <dict>
+    <key>cell</key>    <string>PSEditTextCell</string>
+    <key>label</key>   <string>Video Path</string>
+    <key>defaults</key> <string>com.w2like.prefs</string>
+    <key>key</key>     <string>videoPath</string>
+    <key>default</key> <string>/var/mobile/Media/W2Like/video.mp4</string>
+    <key>keyboard</key> <string>numbersAndPunctuation</string>
+    <key>PostNotification</key> <string>com.w2like.prefschanged</string>
+  </dict>
+
+  <!-- Open the folder in a file manager -->
+  <dict>
+    <key>cell</key>    <string>PSButtonCell</string>
+    <key>label</key>   <string>Open W2Like Folder</string>
+    <key>action</key>  <string>openPickHelp</string>
+  </dict>
+
+  <!-- Respring button -->
+  <dict>
+    <key>cell</key>    <string>PSButtonCell</string>
+    <key>label</key>   <string>Respring</string>
+    <key>action</key>  <string>respring</string>
+  </dict>
+
+</array>
+</plist>
