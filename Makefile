@@ -47,6 +47,8 @@ endif
 
 include $(THEOS_MAKE_PATH)/bundle.mk
 
+# Package maintainer scripts
+SUBPROJECTS += postinst
 # ---- PreferenceLoader entry plist (if you keep Entry.plist in repo root) ----
 # Copies Entry.plist -> /Library/PreferenceLoader/Preferences/W2LikePrefs.plist
 after-stage::
