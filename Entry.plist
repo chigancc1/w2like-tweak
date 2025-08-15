@@ -1,15 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>entry</key>
-    <dict>
-        <key>bundle</key><string>W2LikePrefs</string>
-        <key>cell</key><string>PSLinkCell</string>
-        <key>detail</key><string>W2LRootListController</string>
-        <key>icon</key><string></string>
-        <key>isController</key><true/>
-        <key>label</key><string>W2Like</string>
-    </dict>
+  <key>entry</key>
+  <dict>
+    <!-- The name of your prefs bundle (no .bundle suffix) -->
+    <key>bundle</key> <string>W2LikePrefs</string>
+
+    <!-- Tapable cell in Settings list -->
+    <key>cell</key> <string>PSLinkCell</string>
+
+    <!-- Your root controller class in the bundle -->
+    <key>detail</key> <string>W2LRootListController</string>
+
+    <!-- Optional: put a 60x60 PNG in /Library/PreferenceLoader/Preferences and name it here,
+         or leave empty to use the default gear icon -->
+    <key>icon</key> <string></string>
+
+    <!-- This tells PreferenceLoader that 'detail' is a controller class -->
+    <key>isController</key> <true/>
+
+    <!-- The name shown in Settings -->
+    <key>label</key> <string>W2Like</string>
+  </dict>
 </dict>
 </plist>
